@@ -1,85 +1,44 @@
-﻿using System;
+using System;
+using LabWork.Builders;
+using LabWork.Directors;
+using LabWork.Models;
 
 namespace LabWork
 {
-    // ======== Product ========
-    public class DataPacket
-    {
-        public string DataType { get; set; }
-        public string Sender { get; set; }
-        public string Receiver { get; set; }
-
-        public override string ToString()
-        {
-            return $"Packet:\n" +
-                   $"  Data Type: {DataType}\n" +
-                   $"  Sender: {Sender}\n" +
-                   $"  Receiver: {Receiver}";
-        }
-    }
-
-    // ======== Builder Interface ========
-    public interface IDataPacketBuilder
-    {
-        IDataPacketBuilder SetDataType(string type);
-        IDataPacketBuilder SetSender(string sender);
-        IDataPacketBuilder SetReceiver(string receiver);
-        DataPacket Build();
-    }
-
-    // ======== Concrete Builder ========
-    public class DataPacketBuilder : IDataPacketBuilder
-    {
-        private DataPacket packet = new DataPacket();
-
-        public IDataPacketBuilder SetDataType(string type)
-        {
-            packet.DataType = type;
-            return this;
-        }
-
-        public IDataPacketBuilder SetSender(string sender)
-        {
-            packet.Sender = sender;
-            return this;
-        }
-
-        public IDataPacketBuilder SetReceiver(string receiver)
-        {
-            packet.Receiver = receiver;
-            return this;
-        }
-
-        public DataPacket Build()
-        {
-            return packet;
-        }
-    }
-
-    // ======== Director ========
-    public class PacketDirector
-    {
-        public DataPacket BuildTextPacket(IDataPacketBuilder builder)
-        {
-            return builder
-                .SetDataType("Text")
-                .SetSender("ClientA")
-                .SetReceiver("Server1")
-                .Build();
-        }
-    }
-
-    // ======== Program ========
     class Program
     {
         static void Main(string[] args)
         {
-            var builder = new DataPacketBuilder();
-            var director = new PacketDirector();
+            try
+            {
+                // Приклад з TextPacketBuilder через Director
+                var textBuilder = new TextPacketBuilder();
+                var director = new PacketDirector();
 
-            DataPacket packet = director.BuildTextPacket(builder);
+                Packet textPacket = director.BuildTextMessage(
+                    textBuilder,
+                    from: "Client1",
+                    to: "ServerA",
+                    message: "Hello from Builder!"
+                );
 
-            Console.WriteLine(packet);
+                Console.WriteLine(textPacket);
+                Console.WriteLine();
+
+                // Приклад з BinaryPacketBuilder без Director
+                var binaryBuilder = new BinaryPacketBuilder();
+                Packet binaryPacket = binaryBuilder
+                    .SetSource("Sensor42")
+                    .SetDestination("CollectorX")
+                    .SetBinaryPayload(new byte[] { 0xDE, 0xAD, 0xBE, 0xEF })
+                    .Build();
+
+                Console.WriteLine(binaryPacket);
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"Error: {ex.Message}");
+            }
         }
     }
 }
