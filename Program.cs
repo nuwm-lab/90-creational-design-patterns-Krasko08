@@ -4,6 +4,9 @@ namespace PacketBuilderApp
 {
     // ========================= ENUMS =========================
 
+    /// <summary>
+    /// Тип пакету.
+    /// </summary>
     public enum PacketType
     {
         Text,
@@ -11,6 +14,9 @@ namespace PacketBuilderApp
         Command
     }
 
+    /// <summary>
+    /// Джерело пакету.
+    /// </summary>
     public enum PacketSource
     {
         Sensor,
@@ -18,6 +24,9 @@ namespace PacketBuilderApp
         System
     }
 
+    /// <summary>
+    /// Кінцевий отримувач пакету.
+    /// </summary>
     public enum PacketDestination
     {
         Server,
@@ -27,7 +36,11 @@ namespace PacketBuilderApp
 
     // ========================= PRODUCT =========================
 
-    public class Packet
+    /// <summary>
+    /// Продукт, який створюється Будівельником.
+    /// Immutable.
+    /// </summary>
+    public sealed class Packet
     {
         public PacketType Type { get; }
         public PacketSource Source { get; }
@@ -57,17 +70,24 @@ namespace PacketBuilderApp
 
     // ========================= BUILDER INTERFACE =========================
 
+    /// <summary>
+    /// Інтерфейс Будівельника для покрокового створення пакету.
+    /// </summary>
     public interface IPacketBuilder
     {
         void SetType(PacketType type);
         void SetSource(PacketSource source);
         void SetDestination(PacketDestination destination);
         void SetPayload(string payload);
+
         Packet Build();
     }
 
-    // ========================= TEXT BUILDER =========================
+    // ========================= TEXT PACKET BUILDER =========================
 
+    /// <summary>
+    /// Конкретний Будівельник для текстових пакетів.
+    /// </summary>
     public class TextPacketBuilder : IPacketBuilder
     {
         private PacketType _type;
@@ -90,8 +110,11 @@ namespace PacketBuilderApp
         }
     }
 
-    // ========================= DATA BUILDER =========================
+    // ========================= BINARY PACKET BUILDER =========================
 
+    /// <summary>
+    /// Будівельник, який автоматично кодує дані в Base64.
+    /// </summary>
     public class DataPacketBuilder : IPacketBuilder
     {
         private PacketType _type;
@@ -116,6 +139,9 @@ namespace PacketBuilderApp
 
     // ========================= DIRECTOR =========================
 
+    /// <summary>
+    /// Директор — створює типові конфігурації пакетів.
+    /// </summary>
     public class PacketDirector
     {
         public Packet BuildStatusPacket(IPacketBuilder builder, string message)
@@ -139,7 +165,7 @@ namespace PacketBuilderApp
         }
     }
 
-    // ========================= DEMO (MAIN) =========================
+    // ========================= DEMO =========================
 
     internal class Program
     {
@@ -147,10 +173,12 @@ namespace PacketBuilderApp
         {
             var director = new PacketDirector();
 
+            // Текстовий пакет (Concrete Builder)
             IPacketBuilder textBuilder = new TextPacketBuilder();
             Packet statusPacket = director.BuildStatusPacket(textBuilder, "System operational.");
             Console.WriteLine(statusPacket);
 
+            // Бінарний пакет (Concrete Builder)
             IPacketBuilder dataBuilder = new DataPacketBuilder();
             Packet sensorPacket = director.BuildSensorPacket(dataBuilder, "Temperature=23.5");
             Console.WriteLine(sensorPacket);
