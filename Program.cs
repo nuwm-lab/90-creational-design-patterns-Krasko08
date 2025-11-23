@@ -1,114 +1,161 @@
 using System;
-using System.Collections.Generic;
 
-namespace WebsiteBuilderDemo
+namespace PacketBuilderApp
 {
-    // ========================
-    // PRODUCT – Готовий сайт
-    // ========================
-    public class Website
-    {
-        private readonly List<string> _pages = new List<string>();
+    // ========================= ENUMS =========================
 
-        public void AddPage(string page)
+    public enum PacketType
+    {
+        Text,
+        Binary,
+        Command
+    }
+
+    public enum PacketSource
+    {
+        Sensor,
+        User,
+        System
+    }
+
+    public enum PacketDestination
+    {
+        Server,
+        Database,
+        LocalStorage
+    }
+
+    // ========================= PRODUCT =========================
+
+    public class Packet
+    {
+        public PacketType Type { get; }
+        public PacketSource Source { get; }
+        public PacketDestination Destination { get; }
+        public string Payload { get; }
+        public DateTime CreatedAt { get; }
+
+        public Packet(PacketType type, PacketSource source, PacketDestination destination, string payload)
         {
-            _pages.Add(page);
+            Type = type;
+            Source = source;
+            Destination = destination;
+            Payload = payload;
+            CreatedAt = DateTime.Now;
         }
 
-        public void Show()
+        public override string ToString()
         {
-            Console.WriteLine("======= Сайт створено =======");
-            foreach (var page in _pages)
-            {
-                Console.WriteLine(page);
-            }
-            Console.WriteLine("==================================");
+            return $"Packet:\n" +
+                   $"  Type: {Type}\n" +
+                   $"  Source: {Source}\n" +
+                   $"  Destination: {Destination}\n" +
+                   $"  Payload: {Payload}\n" +
+                   $"  Created: {CreatedAt}\n";
         }
     }
 
-    // =======================================
-    // BUILDER – Інтерфейс будівельника сайту
-    // =======================================
-    public interface IWebsiteBuilder
+    // ========================= BUILDER INTERFACE =========================
+
+    public interface IPacketBuilder
     {
-        void BuildHomePage();
-        void BuildContactsPage();
-        void BuildServicesPage();
-        Website GetWebsite();
+        void SetType(PacketType type);
+        void SetSource(PacketSource source);
+        void SetDestination(PacketDestination destination);
+        void SetPayload(string payload);
+        Packet Build();
     }
 
-    // ==================================================
-    // CONCRETE BUILDER – Конкретний будівельник сайту
-    // ==================================================
-    public class CorporateWebsiteBuilder : IWebsiteBuilder
+    // ========================= TEXT BUILDER =========================
+
+    public class TextPacketBuilder : IPacketBuilder
     {
-        private readonly Website _website = new Website();
+        private PacketType _type;
+        private PacketSource _source;
+        private PacketDestination _destination;
+        private string _payload = string.Empty;
 
-        public void BuildHomePage()
+        public void SetType(PacketType type) => _type = type;
+        public void SetSource(PacketSource source) => _source = source;
+        public void SetDestination(PacketDestination destination) => _destination = destination;
+
+        public void SetPayload(string payload)
         {
-            _website.AddPage("Головна сторінка: Вітання, банер, навігація.");
+            _payload = payload;
         }
 
-        public void BuildContactsPage()
+        public Packet Build()
         {
-            _website.AddPage("Контакти: Email, телефон, карта, форма зворотного зв’язку.");
-        }
-
-        public void BuildServicesPage()
-        {
-            _website.AddPage("Послуги: список послуг компанії, описи, ціни.");
-        }
-
-        public Website GetWebsite()
-        {
-            return _website;
+            return new Packet(_type, _source, _destination, _payload);
         }
     }
 
-    // ==============================
-    // DIRECTOR – Керує побудовою
-    // ==============================
-    public class WebsiteDirector
+    // ========================= DATA BUILDER =========================
+
+    public class DataPacketBuilder : IPacketBuilder
     {
-        private IWebsiteBuilder _builder;
+        private PacketType _type;
+        private PacketSource _source;
+        private PacketDestination _destination;
+        private string _payload = string.Empty;
 
-        public WebsiteDirector(IWebsiteBuilder builder)
+        public void SetType(PacketType type) => _type = type;
+        public void SetSource(PacketSource source) => _source = source;
+        public void SetDestination(PacketDestination destination) => _destination = destination;
+
+        public void SetPayload(string payload)
         {
-            _builder = builder;
+            _payload = Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(payload));
         }
 
-        public void SetBuilder(IWebsiteBuilder builder)
+        public Packet Build()
         {
-            _builder = builder;
-        }
-
-        public Website BuildFullWebsite()
-        {
-            _builder.BuildHomePage();
-            _builder.BuildContactsPage();
-            _builder.BuildServicesPage();
-            return _builder.GetWebsite();
+            return new Packet(_type, _source, _destination, _payload);
         }
     }
 
-    // ==============================
-    // PROGRAM — Точка входу
-    // ==============================
-    class Program
+    // ========================= DIRECTOR =========================
+
+    public class PacketDirector
     {
-        static void Main()
+        public Packet BuildStatusPacket(IPacketBuilder builder, string message)
         {
-            IWebsiteBuilder builder = new CorporateWebsiteBuilder();
-            WebsiteDirector director = new WebsiteDirector(builder);
+            builder.SetType(PacketType.Text);
+            builder.SetSource(PacketSource.System);
+            builder.SetDestination(PacketDestination.Server);
+            builder.SetPayload(message);
 
-            // Створення сайту
-            Website website = director.BuildFullWebsite();
+            return builder.Build();
+        }
 
-            // Вивести результат
-            website.Show();
+        public Packet BuildSensorPacket(IPacketBuilder builder, string data)
+        {
+            builder.SetType(PacketType.Binary);
+            builder.SetSource(PacketSource.Sensor);
+            builder.SetDestination(PacketDestination.Database);
+            builder.SetPayload(data);
 
-            Console.WriteLine("Натисніть будь-яку клавішу...");
-            Console.ReadKey();
+            return builder.Build();
+        }
+    }
+
+    // ========================= DEMO (MAIN) =========================
+
+    internal class Program
+    {
+        static void Main(string[] args)
+        {
+            var director = new PacketDirector();
+
+            IPacketBuilder textBuilder = new TextPacketBuilder();
+            Packet statusPacket = director.BuildStatusPacket(textBuilder, "System operational.");
+            Console.WriteLine(statusPacket);
+
+            IPacketBuilder dataBuilder = new DataPacketBuilder();
+            Packet sensorPacket = director.BuildSensorPacket(dataBuilder, "Temperature=23.5");
+            Console.WriteLine(sensorPacket);
+
+            Console.ReadLine();
         }
     }
 }
